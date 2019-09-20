@@ -35,8 +35,8 @@ Resources:
                     !Sub "${EnvironmentName}-VPCID"
             SecurityGroupIngress: 
             - IpProtocol: tcp
-              FromPort: 8080
-              ToPort: 8080
+              FromPort: 80
+              ToPort: 80
               CidrIp: 0.0.0.0/0
             - IpProtocol: tcp
               FromPort: 22
@@ -62,6 +62,7 @@ Resources:
                   aws s3 cp s3://udacity-demo-1/udacity.zip .
                   unzip -o udacity.zip
           ImageId: ami-005bdb005fb00e791
+          IamInstanceProfile: arn:aws:iam::048235835458:role/OregonAdminRole
           SecurityGroups:
           - Ref: WebServerSecGroup
           InstanceType: t2.micro
@@ -80,3 +81,55 @@ Resources:
                 Ref: WebAppLaunchConfig
             MinSize: "1"
             MaxSize: "3"
+            TargetGroupARNs:
+            - Ref: WebAppTargetGroup
+            
+    WebAppLB:
+        Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+        Properties:
+            Subnets:
+            - Fn::ImportValue: !Sub "${EnvironmentName}-PUB1-SN"
+            - Fn::ImportValue: !Sub "${EnvironmentName}-PUB2-SN"
+            SecurityGroups:
+            - Ref: LBSecGroup
+
+    Listener:
+        Type: AWS::ElasticLoadBalancingV2::Listener
+        Properties:
+            DefaultActions:
+            - Type: forward
+              TargetGroupArn:
+                  Ref: WebAppTargetGroup
+            LoadBalancerArn:
+                Ref: WebAppLB
+            Port: '80'
+            Protocol: HTTP
+
+    ALBListenerRule:
+        Type: AWS::ElasticLoadBalancingV2::ListenerRule
+        Properties:
+            Actions:
+            - Type: forward
+              TargetGroupArn: !Ref 'WebAppTargetGroup'
+            Conditions:
+            - Field: path-pattern
+              Values: [/]
+            ListenerArn: !Ref 'Listener'
+            Priority: 1
+    
+    WebAppTargetGroup:
+        Type: AWS::ElasticLoadBalancingV2::TargetGroup
+        Properties:
+            HealthCheckIntervalSeconds: 10
+            HealthCheckPath: /
+            HealthCheckProtocol: HTTP
+            HealthCheckTimeoutSeconds: 8
+            HealthyThresholdCount: 2
+            Port: 80
+            Protocol: HTTP
+            UnhealthyThresholdCount: 5
+            VpcId:
+                Fn::ImportValue:
+                    Fn::Sub: "${EnvironmentName}-VPCID"
+
+
