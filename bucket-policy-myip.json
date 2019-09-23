@@ -1,0 +1,16 @@
+{
+  "Version": "2012-10-17",
+  "Id": "S3PolicyId1",
+  "Statement": [
+    {
+      "Sid": "IPAllow",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::peter-bucket-001/*",
+      "Condition": {
+         "IpAddress": {"aws:SourceIp": "109.252.29.144/32"}
+      } 
+    } 
+  ]
+}
